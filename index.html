@@ -27,19 +27,22 @@
         </a>
 
         <div class="search-area">
-          <form class="search-form" id="search-form" role="search">
-            <label class="sr-only" for="city-search">Search for a city</label>
-            <span class="search-icon" aria-hidden="true">⌕</span>
-            <input
-              id="city-search"
-              name="city"
-              type="search"
-              placeholder="Search a city..."
-              autocomplete="off"
-              required
-            />
-            <button type="submit">Search</button>
-          </form>
+          <div class="search-controls">
+            <form class="search-form" id="search-form" role="search">
+              <label class="sr-only" for="city-search">Search for a city</label>
+              <span class="search-icon" aria-hidden="true">⌕</span>
+              <input
+                id="city-search"
+                name="city"
+                type="search"
+                placeholder="Search a city..."
+                autocomplete="off"
+                required
+              />
+              <button type="submit">Search</button>
+            </form>
+            <button class="location-button" id="use-location" type="button">Use my location</button>
+          </div>
           <label class="sr-only" for="location-choice">Choose a matching location</label>
           <select class="location-choice" id="location-choice" aria-label="Choose a matching location" hidden></select>
         </div>
@@ -83,8 +86,8 @@
                 <span class="detail-icon detail-icon--humidity" aria-hidden="true">♧</span>
                 <span class="detail-copy"><span class="detail-label">HUMIDITY</span><strong id="humidity">--%</strong></span>
               </div>
-              <button class="favorite-toggle" id="favorite-toggle" type="button" aria-pressed="false">
-                <span aria-hidden="true">♡</span><span id="favorite-label">Add to favourites</span>
+              <button class="favorite-toggle" id="favorite-toggle" type="button" aria-label="Add to favourites" aria-pressed="false" disabled>
+                <span aria-hidden="true">☆</span><span id="favorite-label">Add to favourites</span>
               </button>
             </div>
           </section>

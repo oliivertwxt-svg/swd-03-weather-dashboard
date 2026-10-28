@@ -13,7 +13,7 @@ function formatTemperature(celsius, unit) {
 
 export function renderWeather(weather, elements, unit = "C") {
   const now = new Date();
-  elements.city.textContent = `${weather.city}, ${weather.country}`;
+  elements.city.textContent = [weather.city, weather.country].filter(Boolean).join(", ");
   elements.date.textContent = `Today · ${dateFormatter.format(now)}`;
   elements.temperature.textContent = formatTemperature(weather.temperature, unit);
   elements.temperature.nextElementSibling.textContent = unit;
@@ -64,36 +64,29 @@ export function renderWeather(weather, elements, unit = "C") {
   );
 }
 
-export function renderFavourites(favourites, currentCity, list, emptyMessage, count, unit = "C") {
+export function renderFavourites(favourites, currentCity, list, emptyMessage, count) {
   const entries = favourites.map((city) => {
     const item = document.createElement("li");
     const button = document.createElement("button");
     button.className = "favourite-city";
     button.type = "button";
-    button.dataset.city = city.city;
-    button.dataset.cityKey = city.place.id ?? `${city.city},${city.country}`;
-    button.setAttribute("aria-current", city.city === currentCity ? "true" : "false");
+    button.dataset.cityKey = `${city.latitude},${city.longitude}`;
+    button.setAttribute("aria-current", button.dataset.cityKey === currentCity ? "true" : "false");
 
     const copy = document.createElement("span");
     copy.className = "favourite-city-copy";
     const name = document.createElement("span");
     name.className = "favourite-city-name";
-    name.textContent = city.city;
-    const condition = document.createElement("span");
-    condition.className = "favourite-city-condition";
-    condition.textContent = city.condition;
-    copy.append(name, condition);
+    name.textContent = city.name;
+    copy.append(name);
+    if (city.country) {
+      const country = document.createElement("span");
+      country.className = "favourite-city-condition";
+      country.textContent = city.country;
+      copy.append(country);
+    }
 
-    const weather = document.createElement("span");
-    weather.className = "favourite-city-weather";
-    const icon = document.createElement("span");
-    icon.setAttribute("aria-hidden", "true");
-    icon.textContent = city.icon;
-    const temperature = document.createElement("strong");
-    temperature.textContent = formatTemperature(city.temperature, unit);
-    weather.append(icon, temperature);
-
-    button.append(copy, weather);
+    button.append(copy);
     item.append(button);
     return item;
   });
@@ -105,8 +98,52 @@ export function renderFavourites(favourites, currentCity, list, emptyMessage, co
 
 export function setFavoriteButton(button, label, isFavorite) {
   button.setAttribute("aria-pressed", `${isFavorite}`);
-  button.querySelector("span").textContent = isFavorite ? "♥" : "♡";
+  button.querySelector("span").textContent = isFavorite ? "★" : "☆";
   label.textContent = isFavorite ? "Remove from favourites" : "Add to favourites";
+  button.setAttribute("aria-label", label.textContent);
+}
+
+export function setWeatherLoading(elements, isLoading) {
+  elements.dashboard.setAttribute("aria-busy", `${isLoading}`);
+  elements.currentCard.classList.toggle("is-loading", isLoading);
+
+  if (isLoading) {
+    elements.currentCard.querySelector(".loading-skeleton")?.remove();
+    const skeleton = document.createElement("div");
+    skeleton.className = "loading-skeleton";
+    skeleton.setAttribute("aria-hidden", "true");
+    for (const className of ["skeleton-heading", "skeleton-line", "skeleton-temperature", "skeleton-condition", "skeleton-details"]) {
+      const block = document.createElement("span");
+      block.className = `skeleton-block ${className}`;
+      skeleton.append(block);
+    }
+    elements.currentCard.append(skeleton);
+
+    const cards = Array.from({ length: 7 }, () => {
+      const card = document.createElement("div");
+      card.className = "forecast-card forecast-card--skeleton";
+      card.setAttribute("aria-hidden", "true");
+      for (const className of ["skeleton-day", "skeleton-icon", "skeleton-temperatures"]) {
+        const block = document.createElement("span");
+        block.className = `skeleton-block ${className}`;
+        card.append(block);
+      }
+      return card;
+    });
+    elements.forecast.replaceChildren(...cards);
+    elements.status.textContent = "Loading weather forecast…";
+    elements.status.classList.add("sr-only");
+    elements.status.hidden = false;
+    elements.error.hidden = true;
+    return;
+  }
+
+  elements.currentCard.querySelector(".loading-skeleton")?.remove();
+  if (elements.forecast.querySelector(".forecast-card--skeleton")) {
+    elements.forecast.replaceChildren();
+  }
+  elements.status.classList.remove("sr-only");
+  elements.status.hidden = true;
 }
 
 export function setStatus(status, error, message = "", isError = false) {
