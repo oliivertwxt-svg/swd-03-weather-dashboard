@@ -5,6 +5,7 @@ import { getWeatherCode } from "./weatherCodes.js";
 const elements = {
   form: document.querySelector("#search-form"),
   input: document.querySelector("#city-search"),
+  locationChoice: document.querySelector("#location-choice"),
   city: document.querySelector("#current-heading"),
   date: document.querySelector("#hero-date"),
   temperature: document.querySelector("#temperature"),
@@ -19,12 +20,45 @@ const elements = {
   favouritesList: document.querySelector("#favourites-list"),
   emptyFavourites: document.querySelector("#empty-favourites"),
   favouriteCount: document.querySelector("#favourite-count"),
+  unitToggle: document.querySelector(".unit-toggle"),
   status: document.querySelector("#status-message"),
   error: document.querySelector("#error-message"),
 };
 
 let currentWeather;
+let currentUnit = localStorage.getItem("atmos-temperature-unit") === "F" ? "F" : "C";
+let requestController;
+let locationChoices = [];
 const favourites = new Map();
+
+function getPlaceLabel(place) {
+  return [place.name, place.admin1, place.country]
+    .filter((part, index, parts) => part && parts.indexOf(part) === index)
+    .join(", ");
+}
+
+function showLocationChoices(places) {
+  locationChoices = places;
+  const prompt = document.createElement("option");
+  prompt.value = "";
+  prompt.textContent = "Choose a location...";
+  prompt.disabled = true;
+  prompt.selected = true;
+  const options = places.map((place, index) => {
+    const option = document.createElement("option");
+    option.value = `${index}`;
+    option.textContent = getPlaceLabel(place);
+    return option;
+  });
+  elements.locationChoice.replaceChildren(prompt, ...options);
+  elements.locationChoice.hidden = false;
+}
+
+function clearLocationChoices() {
+  locationChoices = [];
+  elements.locationChoice.replaceChildren();
+  elements.locationChoice.hidden = true;
+}
 
 function getFavouriteKey(weather) {
   return String(weather.place.id ?? `${weather.city},${weather.country}`);
@@ -37,6 +71,7 @@ function updateFavourites() {
     elements.favouritesList,
     elements.emptyFavourites,
     elements.favouriteCount,
+    currentUnit,
   );
   setFavoriteButton(
     elements.favoriteToggle,
@@ -45,18 +80,29 @@ function updateFavourites() {
   );
 }
 
-async function loadCity(cityName, savedWeather = null) {
-  const submitButton = elements.form.querySelector('button[type="submit"]');
-  submitButton.disabled = true;
-  submitButton.textContent = "Loading…";
+async function loadCity(cityName, savedWeather = null, selectedPlace = null) {
+  requestController?.abort();
+  const controller = new AbortController();
+  requestController = controller;
+  clearLocationChoices();
   setStatus(elements.status, elements.error, "Loading…");
 
   try {
     let place;
     if (savedWeather) {
       place = savedWeather.place;
+    } else if (selectedPlace) {
+      place = selectedPlace;
     } else {
-      const places = await searchCity(cityName);
+      const places = await searchCity(cityName, controller.signal);
+      if (controller.signal.aborted) {
+        return;
+      }
+      if (places.length > 1) {
+        showLocationChoices(places);
+        setStatus(elements.status, elements.error, "Choose a location from the matching results.");
+        return;
+      }
       place = places[0];
     }
 
@@ -70,7 +116,10 @@ async function loadCity(cityName, savedWeather = null) {
       return;
     }
 
-    const forecastData = await getForecast(place.latitude, place.longitude);
+    const forecastData = await getForecast(place.latitude, place.longitude, controller.signal);
+    if (controller.signal.aborted) {
+      return;
+    }
     const currentCode = getWeatherCode(forecastData.current.weather_code);
     currentWeather = {
       place,
@@ -90,11 +139,14 @@ async function loadCity(cityName, savedWeather = null) {
         low: forecastData.daily.temperature_2m_min[index],
       })),
     };
-    renderWeather(currentWeather, elements);
+    renderWeather(currentWeather, elements, currentUnit);
     updateFavourites();
     elements.input.value = "";
     setStatus(elements.status, elements.error);
   } catch (error) {
+    if (controller.signal.aborted) {
+      return;
+    }
     console.error("Unable to load weather data from Open-Meteo.", error);
     setStatus(
       elements.status,
@@ -103,8 +155,9 @@ async function loadCity(cityName, savedWeather = null) {
       true,
     );
   } finally {
-    submitButton.disabled = false;
-    submitButton.textContent = "Search";
+    if (requestController === controller) {
+      requestController = null;
+    }
   }
 }
 
@@ -113,6 +166,30 @@ elements.form.addEventListener("submit", (event) => {
   const cityName = elements.input.value.trim();
   if (cityName) {
     loadCity(cityName);
+  }
+});
+
+elements.locationChoice.addEventListener("change", () => {
+  const place = locationChoices[Number(elements.locationChoice.value)];
+  if (place) {
+    loadCity(elements.input.value.trim(), null, place);
+  }
+});
+
+elements.unitToggle.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-unit]");
+  if (!button || button.dataset.unit === currentUnit) {
+    return;
+  }
+
+  currentUnit = button.dataset.unit;
+  localStorage.setItem("atmos-temperature-unit", currentUnit);
+  elements.unitToggle.querySelectorAll("button[data-unit]").forEach((option) => {
+    option.setAttribute("aria-pressed", `${option.dataset.unit === currentUnit}`);
+  });
+  if (currentWeather) {
+    renderWeather(currentWeather, elements, currentUnit);
+    updateFavourites();
   }
 });
 
@@ -138,6 +215,10 @@ elements.favouritesList.addEventListener("click", (event) => {
       loadCity(weather.city, weather);
     }
   }
+});
+
+elements.unitToggle.querySelectorAll("button[data-unit]").forEach((option) => {
+  option.setAttribute("aria-pressed", `${option.dataset.unit === currentUnit}`);
 });
 
 loadCity("San Francisco");

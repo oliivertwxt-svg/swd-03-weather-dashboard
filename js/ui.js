@@ -6,11 +6,17 @@ const dateFormatter = new Intl.DateTimeFormat(undefined, {
   day: "numeric",
 });
 
-export function renderWeather(weather, elements) {
+function formatTemperature(celsius, unit) {
+  const temperature = unit === "F" ? (celsius * 9) / 5 + 32 : celsius;
+  return `${Math.round(temperature)}°`;
+}
+
+export function renderWeather(weather, elements, unit = "C") {
   const now = new Date();
   elements.city.textContent = `${weather.city}, ${weather.country}`;
   elements.date.textContent = `Today · ${dateFormatter.format(now)}`;
-  elements.temperature.textContent = `${Math.round(weather.temperature)}°`;
+  elements.temperature.textContent = formatTemperature(weather.temperature, unit);
+  elements.temperature.nextElementSibling.textContent = unit;
   elements.condition.textContent = weather.condition;
   elements.icon.textContent = weather.icon;
   elements.windSpeed.textContent = `${weather.windSpeed} km/h`;
@@ -28,7 +34,7 @@ export function renderWeather(weather, elements) {
       card.className = "forecast-card";
       card.setAttribute(
         "aria-label",
-        `${dateFormatter.format(forecastDate)}: ${forecastCode.label}, high ${day.high}, low ${day.low}`,
+        `${dateFormatter.format(forecastDate)}: ${forecastCode.label}, high ${formatTemperature(day.high, unit)}, low ${formatTemperature(day.low, unit)}`,
       );
 
       const dayName = document.createElement("span");
@@ -47,10 +53,10 @@ export function renderWeather(weather, elements) {
       const temperatures = document.createElement("span");
       temperatures.className = "forecast-temperatures";
       const high = document.createElement("span");
-      high.textContent = `${Math.round(day.high)}°`;
+      high.textContent = formatTemperature(day.high, unit);
       const low = document.createElement("span");
       low.className = "forecast-low";
-      low.textContent = `${Math.round(day.low)}°`;
+      low.textContent = formatTemperature(day.low, unit);
       temperatures.append(high, low);
       card.append(dayName, icon, condition, temperatures);
       return card;
@@ -58,7 +64,7 @@ export function renderWeather(weather, elements) {
   );
 }
 
-export function renderFavourites(favourites, currentCity, list, emptyMessage, count) {
+export function renderFavourites(favourites, currentCity, list, emptyMessage, count, unit = "C") {
   const entries = favourites.map((city) => {
     const item = document.createElement("li");
     const button = document.createElement("button");
@@ -84,7 +90,7 @@ export function renderFavourites(favourites, currentCity, list, emptyMessage, co
     icon.setAttribute("aria-hidden", "true");
     icon.textContent = city.icon;
     const temperature = document.createElement("strong");
-    temperature.textContent = `${Math.round(city.temperature)}°`;
+    temperature.textContent = formatTemperature(city.temperature, unit);
     weather.append(icon, temperature);
 
     button.append(copy, weather);

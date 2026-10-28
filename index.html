@@ -26,19 +26,23 @@
           <span>atmos<span class="brand-period">.</span></span>
         </a>
 
-        <form class="search-form" id="search-form" role="search">
-          <label class="sr-only" for="city-search">Search for a city</label>
-          <span class="search-icon" aria-hidden="true">⌕</span>
-          <input
-            id="city-search"
-            name="city"
-            type="search"
-            placeholder="Search a city..."
-            autocomplete="off"
-            required
-          />
-          <button type="submit">Search</button>
-        </form>
+        <div class="search-area">
+          <form class="search-form" id="search-form" role="search">
+            <label class="sr-only" for="city-search">Search for a city</label>
+            <span class="search-icon" aria-hidden="true">⌕</span>
+            <input
+              id="city-search"
+              name="city"
+              type="search"
+              placeholder="Search a city..."
+              autocomplete="off"
+              required
+            />
+            <button type="submit">Search</button>
+          </form>
+          <label class="sr-only" for="location-choice">Choose a matching location</label>
+          <select class="location-choice" id="location-choice" aria-label="Choose a matching location" hidden></select>
+        </div>
 
         <p class="topbar-note"><span class="live-dot"></span> Your daily forecast</p>
       </header>
@@ -91,7 +95,10 @@
                 <p class="eyebrow">PLAN AHEAD</p>
                 <h2 id="forecast-heading">7-day forecast</h2>
               </div>
-              <span class="forecast-unit">°C</span>
+              <div class="unit-toggle" role="group" aria-label="Temperature unit">
+                <button class="unit-option" type="button" data-unit="C" aria-pressed="true">°C</button>
+                <button class="unit-option" type="button" data-unit="F" aria-pressed="false">°F</button>
+              </div>
             </div>
             <div class="forecast-grid" id="forecast-grid" aria-live="polite"></div>
           </section>
